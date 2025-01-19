@@ -1,7 +1,0 @@
-from workers.NameBasicsWorker import NameBasicsWorker
-from workers.TitleBasicsWorker import TitleBasicsWorker
-from workers.TitleEpisodeWorker import TitleEpisodeWorker
-from workers.TitleRatingsWorker import TitleRatingsWorker
-from workers.TitlePrincipalsWorker import TitlePrincipalsWorker
-from workers.TitleAkasWorker import TitleAkasWorker
-from workers.TitleCrewWorker import TitleCrewWorker
