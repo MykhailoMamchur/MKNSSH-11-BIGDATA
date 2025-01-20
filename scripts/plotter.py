@@ -4,6 +4,15 @@ from plotly.subplots import make_subplots
 
 
 def plot_genres_popularity(genre_trends_grouped, top_n=10):
+    """
+    Plots the popularity of genres over time, based on total votes, for the top N genres.
+
+    Parameters:
+    ----------
+    genre_trends_grouped (DataFrame): Grouped data containing genre trends.
+    top_n (int): The number of top genres to display.
+    """
+    
     genre_trends_pd = genre_trends_grouped.toPandas()
     genre_trends_pd = genre_trends_pd.sort_values(by=["genre", "startYear"])
     genres = genre_trends_pd.groupby("genre")["totalVotes"].sum().nlargest(top_n).index
@@ -38,6 +47,15 @@ def plot_genres_popularity(genre_trends_grouped, top_n=10):
 
 
 def plot_genres_rating(genre_trends_grouped, top_n=10):
+    """
+    Plots the average rating of genres over time, for the top N genres.
+
+    Parameters:
+    ----------
+    genre_trends_grouped (DataFrame): Grouped data containing genre trends.
+    top_n (int): The number of top genres to display.
+    """
+
     genre_trends_pd = genre_trends_grouped.toPandas()
     genre_trends_pd = genre_trends_pd.sort_values(by=["genre", "startYear"])
     genres = genre_trends_pd.groupby("genre")["totalVotes"].sum().nlargest(top_n).index
@@ -72,6 +90,14 @@ def plot_genres_rating(genre_trends_grouped, top_n=10):
 
 
 def plot_genres_interactive(genre_trends_pd):
+    """
+    Creates an interactive plot that shows both total votes and average ratings for genres over time.
+
+    Parameters:
+    ----------
+    genre_trends_pd (DataFrame): Data containing genre trends, including total votes and average ratings.
+    """
+
     # Sort and filter the data
     df = genre_trends_pd.sort_values(by=["genre", "startYear"])
 

@@ -8,6 +8,30 @@ from pyspark.sql.types import IntegerType, DoubleType
 
 
 def load_tables(spark, dirname='data'):
+    """
+    Loads and preprocesses IMDb dataset tables from the specified directory.
+
+    Parameters:
+    ----------
+    spark (SparkSession): The active Spark session used to read the data.
+    dirname (str, optional): The directory containing the IMDb dataset files (default is 'data').
+
+    The function performs the following operations:
+    1. Reads multiple IMDb-related TSV files into Spark DataFrames.
+    2. Replaces placeholder values ('\\N') with NULL values in all string columns.
+    3. Casts specific columns to appropriate data types (e.g., integers and doubles).
+
+    Returns:
+    --------
+    tuple: A collection of processed Spark DataFrames, including:
+        - name_basics: Information about individuals (e.g., actors, directors).
+        - title_akas: Alternative titles for works.
+        - title_basics: Basic information about titles (e.g., movies, TV shows).
+        - title_crew: Crew member details for titles.
+        - title_principals: Principal cast and crew information.
+        - title_ratings: Ratings and vote counts for titles.
+    """
+    
     # Load datasets
     name_basics = spark.read.csv(f"{dirname}/name.basics.tsv", sep="\t", header=True, inferSchema=True)
     title_akas = spark.read.csv(f"{dirname}/title.akas.tsv", sep="\t", header=True, inferSchema=True)
@@ -44,6 +68,29 @@ def load_tables(spark, dirname='data'):
 
 
 def dataset_generate_initial_form(title_akas, title_basics, title_crew, title_principals, title_ratings):
+    """
+    Prepares and processes movie and TV show data for analysis and modeling.
+
+    Parameters:
+    ----------
+    title_akas (DataFrame): DataFrame containing alternate title information.
+    title_basics (DataFrame): DataFrame containing basic details of titles such as type, genre, and runtime.
+    title_crew (DataFrame): DataFrame containing director and writer details.
+    title_principals (DataFrame): DataFrame containing key cast and crew members.
+    title_ratings (DataFrame): DataFrame containing rating and vote count details.
+
+    The function performs the following operations:
+    1. Filters and cleans the data to include only non-adult movies and TV shows from 2000 to 2024.
+    2. Joins various datasets to consolidate title details, ratings, crew, and principal cast.
+    3. One-hot encodes genres and title types for better analysis.
+    4. Aggregates principal cast data to count actors, writers, and other roles.
+    5. Creates runtime buckets to categorize movies based on their duration.
+    6. Ensures proper data types for numerical columns.
+
+    Returns:
+    --------
+    DataFrame: A processed and enriched Spark DataFrame ready for further analysis or modeling.
+    """
     # Define title types to filter
     title_types = ["tvMovie", "movie", "tvShort", "short"]
 
@@ -143,6 +190,24 @@ def dataset_generate_initial_form(title_akas, title_basics, title_crew, title_pr
 
 
 def dataset_add_people_columns(merged_data, name_basics):
+    """
+    Enhances the dataset by adding aggregated writer and director-related features.
+
+    Parameters:
+    ----------
+    merged_data (DataFrame): The existing movie dataset containing titles and ratings.
+    name_basics (DataFrame): DataFrame containing person-related details such as known titles and professions.
+
+    The function performs the following operations:
+    1. Extracts individual writer and director IDs and joins them with `name_basics` to obtain additional details.
+    2. Aggregates statistics such as the average, minimum, and maximum number of known titles and professions.
+    3. Joins the aggregated data back to the main dataset.
+
+    Returns:
+    -------
+    DataFrame: A DataFrame enriched with writer and director statistics.
+    """
+
     # Step 1: Explode `writers` and `directors` columns into individual rows
     writers_exploded = merged_data.withColumn("writer_id", explode(split(col("writers"), ","))).select("tconst", "writer_id")
     directors_exploded = merged_data.withColumn("director_id", explode(split(col("directors"), ","))).select("tconst", "director_id")
@@ -186,6 +251,24 @@ def dataset_add_people_columns(merged_data, name_basics):
 
 
 def dataset_add_popularity_columns(merged_data, N=1000):
+    """
+    Adds popularity-based features for directors and writers based on ratings and votes.
+
+    Parameters:
+    ----------
+    merged_data (DataFrame): The dataset containing movies and crew details.
+    N (int): The number of top-ranked directors and writers to consider.
+
+    The function performs the following operations:
+    1. Identifies the top N directors and writers based on both ratings and vote counts.
+    2. Adds binary flags to indicate whether a title has a top-rated or popular director/writer.
+    3. Cleans the dataset by removing rows with missing values.
+
+    Returns:
+    --------
+    DataFrame: A DataFrame with additional columns indicating the presence of popular directors and writers.
+    """
+
     # Function to rank and select top N directors or writers
     def rank_entities_by_impact(df, column_name, N, rating_col="averageRating", votes_col="numVotes"):
         exploded = (
@@ -233,6 +316,18 @@ def dataset_add_popularity_columns(merged_data, N=1000):
 
 
 def dataset_cleanup_columns(merged_data):
+    """
+    Cleans up the dataset by dropping unnecessary columns.
+
+    Parameters:
+    ----------
+    merged_data (DataFrame): The dataset containing movie and crew information.
+
+    Returns:
+    ----------
+    DataFrame: A cleaned DataFrame with only relevant columns retained.
+    """
+
     columns_to_drop = [
         "tconst", "titleType", "genre", "directors", "writers", "numVotes"
     ]
@@ -248,6 +343,28 @@ def generate_dataset(name_basics,
                      title_crew,
                      title_principals,
                      title_ratings):
+    """
+    Generates a processed movie dataset by integrating multiple data sources and adding relevant features.
+
+    Parameters:
+    ----------
+    name_basics (DataFrame): Contains information about people in the film industry.
+    title_akas (DataFrame): Contains alternative titles for movies and shows.
+    title_basics (DataFrame): Contains basic information about movies and TV shows.
+    title_crew (DataFrame): Contains crew information (directors, writers).
+    title_principals (DataFrame): Contains principal cast and crew members.
+    title_ratings (DataFrame): Contains user ratings and vote counts.
+
+    The function performs the following steps:
+    1. Generates an initial dataset by merging key tables and extracting features.
+    2. Adds columns related to writer and director statistics.
+    3. Introduces popularity-based features for directors and writers.
+    4. Cleans the dataset by removing unnecessary columns.
+
+    Returns:
+    -------
+    DataFrame: The final processed dataset ready for analysis.
+    """
     
     merged_data = dataset_generate_initial_form(title_akas, title_basics, title_crew, title_principals, title_ratings)
     merged_data = dataset_add_people_columns(merged_data=merged_data, name_basics=name_basics)
@@ -258,4 +375,12 @@ def generate_dataset(name_basics,
 
 
 def save_dataset_parquet(dataset, output_dirname='output'):
+    """
+    Saves dataset into parquet format.
+
+    Parameters:
+    ----------
+    dataset (DataFrame): the dataset to save
+    output_dirname (str): the output dirname
+    """
     dataset.write.parquet(output_dirname)

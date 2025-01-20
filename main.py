@@ -19,6 +19,7 @@ if __name__ == "__main__":
     dataset_pd = load_dataset(path='output_parquet')
     dataset_pd = generate_add_embeddings(dataset_pd)
     dataset_pd = preprocess_dataset(dataset_pd)
+
     X_train, X_test, y_train, y_test = get_splits(dataset_pd, test_size=0.2)
 
     model = train_model(X_train, y_train)

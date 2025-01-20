@@ -4,6 +4,23 @@ from sentence_transformers import SentenceTransformer
 
 
 def generate_add_embeddings(df):
+    """
+    Generates and adds text embeddings for movie titles using a pre-trained transformer model.
+
+    Parameters:
+    -----------
+    df (DataFrame): Input DataFrame containing a 'primaryTitle' column with movie titles.
+
+    The function performs the following steps:
+    1. Uses the 'all-MiniLM-L6-v2' model from Sentence Transformers to generate embeddings for movie titles.
+    2. Applies UMAP dimensionality reduction to reduce embeddings to 10 components.
+    3. Converts the reduced embeddings into a DataFrame and merges them with the original DataFrame.
+
+    Returns:
+    --------
+    DataFrame: The input DataFrame with additional columns representing the reduced title embeddings.
+    """
+    
     model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
     embeddings = model.encode(df['primaryTitle'].to_numpy())
 
